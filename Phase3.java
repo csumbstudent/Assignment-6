@@ -128,7 +128,7 @@ public class Phase3 {
       }
       private static void playComputerCard(){
          //Play the computer's card
-         int[] computerPlay = getComputerPlay();
+         int[] computerPlay = getPossiblePlay(0);
          if(computerPlay[0] != -1){
             int computerStack = computerPlay[0];
             int computerCardPosition = computerPlay[1];
@@ -165,6 +165,7 @@ public class Phase3 {
       }
       //returns true if the card was placed.
       public static boolean placeCard(int stack){
+
          Card topCard = cardStacks[stack].inspectTopCard();
          Card playerCard = highCardGame.getHand(HUMAN_PLAYER).inspectCard(selectedCard);
          String cardValues = new String(Card.validCardValues);
@@ -200,6 +201,11 @@ public class Phase3 {
             return 0;
       }
       private static void skipPlayerTurn(){
+         int play[] = getPossiblePlay(HUMAN_PLAYER);
+         if(play[0] != -1){
+            view.setStatusText("You have a card that can be placed on Stack " + (play[0] + 1) + ".");
+            return;
+         }
          boolean playComputerCard = true;
          consecutiveTurnSkips++;
          noPlayCount[HUMAN_PLAYER]++;
@@ -243,11 +249,15 @@ public class Phase3 {
          view.updateTimer("0:00");
          noPlayCount[0] = 0;
          noPlayCount[1] = 0;
-         for(int i = 0; i < 40; i++)
-            highCardGame.getCardFromDeck();
+         //For debugging
+         //for(int i = 0; i < 40; i++)
+         //   highCardGame.getCardFromDeck();
          timerThread = new Thread(timer);
          view.addButtonListener();
          consecutiveTurnSkips = 0;
+         timerThread = new Thread(timer);
+         timerRunning = true;
+         timerThread.start();
       }
       private static void startGame(){
          initGame();
@@ -259,14 +269,14 @@ public class Phase3 {
            it chooses to play.
       This function makes this game very hard to win. The computer knows which card
       the human chooses to play. It chooses which card to play based on this. */
-      static int[] getComputerPlay() {
+      static int[] getPossiblePlay(int player) {
          //Look at each of the stacks, and determine if there is a card in
          //its hand that can be placed on the stack.
          for(int i = 0; i < cardStacks.length; i++){
             String cardValues = new String(Card.validCardValues);
             char[] validValues = getValidValues(cardStacks[i].inspectTopCard());
-            for(int x = 0; x < highCardGame.getHand(0).getNumCards(); x++){
-               Card card = highCardGame.getHand(0).inspectCard(x);
+            for(int x = 0; x < highCardGame.getHand(player).getNumCards(); x++){
+               Card card = highCardGame.getHand(player).inspectCard(x);
                for(char value : validValues)
                   if(card.getValue() == value)
                      return new int[] {i, x};
@@ -295,6 +305,7 @@ public class Phase3 {
          return true;
       }
       private static void gameOver(){
+         timerRunning = false;
          int winner = determineWinner();
          if(winner == HUMAN_PLAYER)
             view.setStatusText(view.getStatusText() + " You beat the computer! Good job! Click here to play again!");
