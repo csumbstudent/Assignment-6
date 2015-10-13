@@ -35,8 +35,8 @@ public class Phase3 {
    public static final int NUM_CARDS_PER_HAND = 7;
    public static final int NUM_PLAYERS = 2;
    public static void main(String[] args){
-      view = new View("High Card Game", NUM_PLAYERS, NUM_CARDS_PER_HAND);
       controller = new Controller();
+      view = new View("High Card Game", NUM_PLAYERS, NUM_CARDS_PER_HAND);
       Model model = new Model(controller, view);
       model.startGame();
 
@@ -90,6 +90,8 @@ public class Phase3 {
       private static CardStack[] cardStacks = new CardStack[NUM_STACKS];
       private static int selectedCard = -1;
       private static int[] noPlayCount = new int[NUM_PLAYERS];
+      private static int consecutiveTurnSkips = 0;
+      private static boolean newCardTopsPlacedLastRound = false;
       public Model(Controller controller, View view){
          this.controller = controller;
          this.view = view;
@@ -124,6 +126,43 @@ public class Phase3 {
          }
          return validValues;
       }
+      private static void playComputerCard(){
+         //Play the computer's card
+         int[] computerPlay = getComputerPlay();
+         if(computerPlay[0] != -1){
+            int computerStack = computerPlay[0];
+            int computerCardPosition = computerPlay[1];
+            Card computerCard = highCardGame.getHand(0).inspectCard(computerCardPosition);
+            highCardGame.playCard(0, computerCardPosition);
+            highCardGame.takeCard(0, NUM_CARDS_PER_HAND - 1);
+            view.drawHand(0, highCardGame.getHand(0), false);
+            view.setPlayedCard(computerStack, computerCard);
+            cardStacks[computerStack].addCard(computerCard);
+            view.setStatusText("Computer played " + computerCard + " on Stack " + (computerStack+1) + ".");
+            consecutiveTurnSkips = 0;
+         }
+         else{
+            view.setStatusText("Computer could not play a card.");
+            noPlayCount[0]++;
+            view.updateNoPlayLabel(noPlayCount[0], noPlayCount[1]);
+            consecutiveTurnSkips++;
+            //The computer does not have a card at this point. Indicate a skipped turn
+            //by returning -1.
+            if(consecutiveTurnSkips >= 2) {
+               if(!placeNewStackTops()){
+                  return;
+               }
+               consecutiveTurnSkips = 0;
+            }
+         }
+         if(newCardTopsPlacedLastRound){
+            view.setStatusText(view.getStatusText() + " A new card has been placed on each stack.");
+            newCardTopsPlacedLastRound = false;
+         }
+         if(highCardGame.getHand(0).getNumCards() == 0)
+            gameOver();
+         view.setStatusText(view.getStatusText() + " Your turn!");
+      }
       //returns true if the card was placed.
       public static boolean placeCard(int stack){
          Card topCard = cardStacks[stack].inspectTopCard();
@@ -133,6 +172,7 @@ public class Phase3 {
 
          for(char value : validValues){
             if(value == playerCard.getValue()){
+               consecutiveTurnSkips = 0;
                cardStacks[stack].addCard(playerCard);
                highCardGame.playCard(HUMAN_PLAYER, selectedCard);
                selectedCard = -1;
@@ -140,46 +180,41 @@ public class Phase3 {
                highCardGame.getHand(HUMAN_PLAYER).sort();
                view.drawHand(HUMAN_PLAYER, highCardGame.getHand(HUMAN_PLAYER), true);
                view.setPlayedCard(stack, playerCard);
-
-               //Play the computer's card
-               int[] computerPlay = getComputerPlay();
-               if(computerPlay[0] != -1){
-                  int computerStack = computerPlay[0];
-                  int computerCardPosition = computerPlay[1];
-                  Card computerCard = highCardGame.getHand(0).inspectCard(computerCardPosition);
-                  highCardGame.playCard(0, computerCardPosition);
-                  highCardGame.takeCard(0, NUM_CARDS_PER_HAND - 1);
-                  view.drawHand(0, highCardGame.getHand(0), false);
-                  view.setPlayedCard(computerStack, computerCard);
-                  cardStacks[computerStack].addCard(computerCard);
-                  view.setStatusText("Computer played " + computerCard + " on Stack " + (computerStack+1) + ". Your turn!");
+               if(highCardGame.getHand(HUMAN_PLAYER).getNumCards() == 0) {
+                  gameOver();
+                  return true;
                }
-               else{
-                  view.setStatusText("Computer could not play a card. Your turn!");
-                  noPlayCount[0]++;
-                  view.updateNoPlayLabel(0, "Computer: " + noPlayCount[0]);
-               }
-
+               playComputerCard();
                return true;
             }
          }
          view.setStatusText("That card cannot go there... Select a different card.");
          return false;
       }
-      /* In: [1] The Card array to add the won cards to.
-          [2] An arbitrary number of Card objects representing the won cards.
-      Out: Nothing */
-      static void addToWinnings(Card[] winnings, Card... cards) {
-         //Find the first null position in the winnings array and place
-         //each card in that position.
-         for (int i = 0; i < cards.length; i++)
-            for (int j = 0; j < winnings.length; j++)
-               if (winnings[j] == null) {
-                  winnings[j] = new Card(cards[i]);
-                  break;
-               }
+      private static int determineWinner(){
+         if(noPlayCount[0] == noPlayCount[1])
+            return -1;
+         else if(noPlayCount[0] > noPlayCount[1])
+            return 1;
+         else
+            return 0;
       }
-
+      private static void skipPlayerTurn(){
+         boolean playComputerCard = true;
+         consecutiveTurnSkips++;
+         noPlayCount[HUMAN_PLAYER]++;
+         view.setStatusText("");
+         if(consecutiveTurnSkips == 2) {
+            if(!placeNewStackTops()){
+               playComputerCard = false;
+            }
+            consecutiveTurnSkips = 0;
+         }
+         if(playComputerCard) {
+            playComputerCard();
+         }
+         view.updateNoPlayLabel(noPlayCount[0], noPlayCount[1]);
+      }
       //The actual highCardGame.
       static CardGameFramework highCardGame;
       private static void initGame(){
@@ -194,8 +229,7 @@ public class Phase3 {
          view.drawHand(1, highCardGame.getHand(1), true);
          view.setPlayLabelText(0, "Stack 1");
          view.setPlayLabelText(1, "Stack 2");
-         view.updateNoPlayLabel(0, "Computer: 0");
-         view.updateNoPlayLabel(1, "You: 0");
+         view.updateNoPlayLabel(0, 0);
          view.setStatusText("Click on a card in your hand, then click on the card stack you would like to play it on.");
          cardStacks[0] = new CardStack(Deck.MAX_CARDS);
          cardStacks[1] = new CardStack(Deck.MAX_CARDS);
@@ -208,8 +242,12 @@ public class Phase3 {
          timerSecond = 0;
          view.updateTimer("0:00");
          noPlayCount[0] = 0;
-         noPlayCount[1] = 1;
+         noPlayCount[1] = 0;
+         for(int i = 0; i < 40; i++)
+            highCardGame.getCardFromDeck();
          timerThread = new Thread(timer);
+         view.addButtonListener();
+         consecutiveTurnSkips = 0;
       }
       private static void startGame(){
          initGame();
@@ -234,9 +272,38 @@ public class Phase3 {
                      return new int[] {i, x};
             }
          }
-         //The computer does not have a card at this point. Indicate a skipped turn
-         //by returning -1.
          return new int[] {-1, -1};
+      }
+      private static boolean placeNewStackTops(){
+         int errorFlagCount = 0;
+         for(int i = 0; i < NUM_STACKS; i++){
+            Card card = highCardGame.getCardFromDeck();
+            if(!card.errorFlag) {
+               cardStacks[i].addCard(card);
+               view.setPlayedCard(i, card);
+            }
+            else
+               errorFlagCount++;
+         }
+         if(errorFlagCount == NUM_STACKS) {
+            gameOver();
+            return false;
+         }
+         else {
+            newCardTopsPlacedLastRound = true;
+         }
+         return true;
+      }
+      private static void gameOver(){
+         int winner = determineWinner();
+         if(winner == HUMAN_PLAYER)
+            view.setStatusText(view.getStatusText() + " You beat the computer! Good job! Click here to play again!");
+         else if(winner == 0)
+            view.setStatusText(view.getStatusText() + " The computer beat you... Click here to play again!");
+         else
+            view.setStatusText(view.getStatusText() + " The game ends in a draw. Click here to play again!");
+         view.removeButtonListener();
+         view.addStatusListener();
       }
       /* In: A Card object
       Out: An integer representing that card's value */
@@ -270,10 +337,10 @@ public class Phase3 {
       static JLabel[] playedCardLabels;
       static JLabel[] playLabelText;
       static JLabel timerLabel = new JLabel("0:00");
-      static JLabel[] noPlayLabels = new JLabel[NUM_PLAYERS];
-      static JLabel noPlayHeader = new JLabel("No Play Counts");
+      static JLabel noPlayLabel = new JLabel();
       static JPanel[] playedCardPanels = new JPanel[Model.NUM_STACKS];
       static JLabel skipTurnLabel = new JLabel("Click here to skip your turn.");
+      static JButton skipTurnButton = new JButton("I cannot play.");
       private static final Color COLOR_BLUE = new Color(0, 0, 255);
       //A label for the status text, for example, "You win!"
       static JLabel statusText = new JLabel("");
@@ -284,20 +351,26 @@ public class Phase3 {
                return i;
          return -1;
       }
-      private static void updateNoPlayLabel(int player, String text){
-         noPlayLabels[player].setText(text);
+      private static void updateNoPlayLabel(int player1Score, int player2Score){
+         noPlayLabel.setText("<html><u>No Play Counts</u><br>Computer: " + player1Score + "<br>You: " + player2Score + "</html>");
       }
       private static void updateTimer(String timerString){
          timerLabel.setText(timerString);
          cardTable.pnlTimer.revalidate();
          cardTable.pnlTimer.repaint();
       }
+      private static void addButtonListener(){
+         skipTurnButton.addActionListener(model.controller);
+      }
+      private static void removeButtonListener(){
+         skipTurnButton.removeActionListener(model.controller);
+      }
       private static void addStatusListener(){
-         statusText.addMouseListener(controller);
+         statusText.addMouseListener(model.controller);
       }
       private static void removeStatusListener(){
          statusText.setBorder(null);
-         statusText.removeMouseListener(controller);
+         statusText.removeMouseListener(model.controller);
       }
       public View(String title, int numPlayers, int numCardsPerHand){
          this.cardTable = new CardTable(title, numCardsPerHand, numPlayers);
@@ -320,24 +393,17 @@ public class Phase3 {
          for(int i = 0; i < playedCardLabels.length; i++){
             playedCardLabels[i] = new JLabel();
             playedCardLabels[i].setHorizontalAlignment(JLabel.CENTER);
-            playedCardLabels[i].addMouseListener(new Controller());
+            playedCardLabels[i].addMouseListener(Phase3.controller);
             playedCardPanels[i].add(playedCardLabels[i]);
          }
-         noPlayHeader.setHorizontalAlignment(JLabel.LEFT);
-         noPlayHeader.setVerticalAlignment(JLabel.BOTTOM);
-         cardTable.pnlNoPlays.add(noPlayHeader);
-         for(int i = 0; i < noPlayLabels.length; i++){
-            noPlayLabels[i] = new JLabel();
-            noPlayLabels[i].setHorizontalAlignment(JLabel.LEFT);
-            noPlayLabels[i].setVerticalAlignment(JLabel.BOTTOM);
-            cardTable.pnlNoPlays.add(noPlayLabels[i]);
-         }
+         noPlayLabel.setHorizontalAlignment(JLabel.LEFT);
+         noPlayLabel.setVerticalAlignment(JLabel.BOTTOM);
+         cardTable.pnlNoPlays.add(noPlayLabel);
          statusText.setHorizontalAlignment(JLabel.CENTER);
-         skipTurnLabel.setHorizontalAlignment(JLabel.CENTER);
-         skipTurnLabel.addMouseListener(new Controller());
-
+         skipTurnButton.setHorizontalAlignment(JButton.CENTER);
+         skipTurnButton.setFocusPainted(false);
          cardTable.pnlStatusText.add(statusText);
-         cardTable.pnlStatusText.add(skipTurnLabel);
+         cardTable.pnlStatusText.add(skipTurnButton);
          timerLabel.setHorizontalAlignment(JLabel.RIGHT);
          timerLabel.setVerticalAlignment(JLabel.BOTTOM);
          cardTable.pnlTimer.add(timerLabel);
@@ -543,7 +609,7 @@ public class Phase3 {
             pnlPlayedCardArea.add(pnlPlayerText);
             pnlPlayArea.add(pnlTimer, BorderLayout.EAST);
             pnlPlayArea.add(pnlNoPlays, BorderLayout.WEST);
-            pnlPlayArea.add(pnlPlayedCardArea, BorderLayout.NORTH);
+            pnlPlayArea.add(pnlPlayedCardArea, BorderLayout.CENTER);
             pnlPlayArea.add(pnlStatusText, BorderLayout.SOUTH);
             this.add(pnlPlayArea, BorderLayout.CENTER);
             ///Create the human's hand area.
@@ -558,7 +624,7 @@ public class Phase3 {
          }
       }
    }
-   private static class Controller implements MouseListener{
+   private static class Controller implements MouseListener, ActionListener{
       private static JLabel selectedCard = null;
       private static boolean stackClickable = false;
       /* In: A MouseEvent object
@@ -587,6 +653,10 @@ public class Phase3 {
       public void mouseClicked(MouseEvent e) {
          //The source will always be a JLabel
          JLabel source = (JLabel)e.getSource();
+         if(source == view.statusText){
+            model.initGame();
+            return;
+         }
          //Determine if the label being clicked is a card in the players hand.
          for(int playerHand = 0; playerHand < view.playerHands.length; playerHand++){
             for(int card = 0; card < model.highCardGame.getHand(playerHand).getNumCards(); card++){
@@ -619,6 +689,10 @@ public class Phase3 {
                selectedCard = null;
             }
          }
+      }
+      public void actionPerformed(ActionEvent e){
+         //The only button is the skip turn button, so just skip the turn here.
+         model.skipPlayerTurn();
       }
       //Not used.
       public void mouseReleased(MouseEvent e) {
@@ -723,7 +797,7 @@ class Deck {
    */
    public Card dealCard() {
       //Return an invalid card if there are no cards in the deck.
-      if (this.topCard < 0)
+      if (this.topCard <= 0)
          return new Card('0', Card.Suit.spades);
       else {
          //Create a copy of the card on the top of the deck.
