@@ -51,9 +51,9 @@ class CardStack{
    and initializes the model, view, and controller. */
 public class Phase3 {
    //Create model, view, and controller objects.
-   static Controller controller;
-   static Model model;
-   static View view;
+   private static Controller controller;
+   private static Model model;
+   private static View view;
    //A couple constants
    public static final int NUM_CARDS_PER_HAND = 7;
    public static final int NUM_PLAYERS = 2;
@@ -71,7 +71,7 @@ public class Phase3 {
       for them to exist independently outside of some kind of specific framework. */
    private static class Model{
       //A Runnable object to be ran by the timerThread.
-      static Runnable timer = new Runnable(){
+      private static Runnable timer = new Runnable(){
          public void run(){
             //Keep executing while the timer is running.
             while(timerRunning) {
@@ -95,16 +95,16 @@ public class Phase3 {
          }
       };
       //A thred object to run the timer in a separate thread.
-      static Thread timerThread;
+      private static Thread timerThread;
       //False allows the timerthread to end.
-      static boolean timerRunning = false;
+      private static boolean timerRunning = false;
       //Data for the CardgameFramework
-      static int numPacksPerDeck = 1;
-      static int numJokersPerPack = 0;
-      static int numUnusedCardsPerPack = 0;
-      static Card[] unusedCardsPerPack = null;
+      private static int numPacksPerDeck = 1;
+      private static int numJokersPerPack = 0;
+      private static int numUnusedCardsPerPack = 0;
+      private static Card[] unusedCardsPerPack = null;
       //The actual highCardGame.
-      static CardGameFramework highCardGame;
+      private static CardGameFramework highCardGame;
       //HUMAN_PLAYER is the index of the human player in this game.
       private static final int HUMAN_PLAYER = 1;
       //The minute and second for the timer.
@@ -145,7 +145,7 @@ public class Phase3 {
          return validValues;
       }
 
-      private static void playComputerCard(){
+      public static void playComputerCard(){
          //Play the computer's card
          int[] computerPlay = getPossiblePlay(0);
          if(computerPlay[0] != -1){
@@ -222,7 +222,7 @@ public class Phase3 {
             return 0;
       }
 
-      private static void skipPlayerTurn(){
+      public static void skipPlayerTurn(){
          int play[] = getPossiblePlay(HUMAN_PLAYER);
          if(play[0] != -1){
             view.setStatusText("You have a card that can be placed on Stack " + (play[0] + 1) + ".");
@@ -245,7 +245,7 @@ public class Phase3 {
       }
 
 
-      private static void initGame(){
+      public static void initGame(){
          highCardGame.newGame();
          highCardGame.deal();
          highCardGame.getHand(HUMAN_PLAYER).sort();
@@ -283,7 +283,7 @@ public class Phase3 {
 
       }
 
-      static int[] getPossiblePlay(int player) {
+      private static int[] getPossiblePlay(int player) {
          //Look at each of the stacks, and determine if there is a card in
          //its hand that can be placed on the stack.
          for(int i = 0; i < cardStacks.length; i++){
@@ -341,25 +341,25 @@ public class Phase3 {
       such as the statusText, played cards, etc. */
    private static class View{
       //Dynamic labels:
-      static JLabel[][] playerHands;
-      static JLabel[] playedCardLabels;
-      static JLabel[] playLabelText;
-      static JLabel timerLabel = new JLabel("0:00");
-      static JLabel noPlayLabel = new JLabel();
-      static JPanel[] playedCardPanels = new JPanel[Model.NUM_STACKS];
-      static JLabel skipTurnLabel = new JLabel("Click here to skip your turn.");
+      private static JLabel[][] playerHands;
+      private static JLabel[] playedCardLabels;
+      private static JLabel[] playLabelText;
+      private static JLabel timerLabel = new JLabel("0:00");
+      private static JLabel noPlayLabel = new JLabel();
+      private static JPanel[] playedCardPanels = new JPanel[Model.NUM_STACKS];
+      private static JLabel skipTurnLabel = new JLabel("Click here to skip your turn.");
       //The skip turn button
-      static JButton skipTurnButton = new JButton("I cannot play.");
+      private static JButton skipTurnButton = new JButton("I cannot play.");
       private static final Color COLOR_BLUE = new Color(0, 0, 255);
       //A label for the status text, for example, "You win!"
-      static JLabel statusText = new JLabel("");
+      private static JLabel statusText = new JLabel("");
       //The cardTable object, which is the window and all of the unchaning components.
-      static CardTable cardTable;
+      private static CardTable cardTable;
       /* In: [1] The index of the player
              [2] A JLabel representing the card chosen by that player
          Out: An integer representing the position in the player's hand of the card
               represented by the JLabel, or -1 if the JLabel is not in the player's hand. */
-      private int getHandPosition(int player, JLabel chosenCard){
+      public int getHandPosition(int player, JLabel chosenCard){
          for(int i = 0; i < this.playerHands[player].length; i++)
             if(this.playerHands[player][i] == chosenCard)
                return i;
@@ -368,12 +368,12 @@ public class Phase3 {
       /* In: [1] player 1's score
              [2] player 2's score
          Out: Nothing */
-      private static void updateNoPlayLabel(int player1Score, int player2Score){
+      public static void updateNoPlayLabel(int player1Score, int player2Score){
          noPlayLabel.setText("<html><u>No Play Counts</u><br>Computer: " + player1Score + "<br>You: " + player2Score + "</html>");
       }
       /* In: The String object containing the text for the timer to display.
          Out: Nothing */
-      private static void updateTimer(String timerString){
+      public static void updateTimer(String timerString){
          timerLabel.setText(timerString);
          cardTable.pnlTimer.revalidate();
          cardTable.pnlTimer.repaint();
@@ -381,25 +381,25 @@ public class Phase3 {
       /* In: Nothing
          Out: Nothing
          Adds an ActionListener to the skipTurnButton. */
-      private static void addButtonListener(){
+      public static void addButtonListener(){
          skipTurnButton.addActionListener(Phase3.controller);
       }
       /* In: Nothing
          Out: Nothing
          Remvoes an ActionListener from the skipTurnButton. */
-      private static void removeButtonListener(){
+      public static void removeButtonListener(){
          skipTurnButton.removeActionListener(Phase3.controller);
       }
       /* In: Nothing
          Out: Nothing
          Adds a MouseListener to the statusText. */
-      private static void addStatusListener(){
+      public static void addStatusListener(){
          statusText.addMouseListener(Phase3.controller);
       }
       /* In: Nothing
          Out: Nothing
          Removes a MouseListener from the statusText. */
-      private static void removeStatusListener(){
+      public static void removeStatusListener(){
          statusText.setBorder(null);
          statusText.removeMouseListener(Phase3.controller);
       }
@@ -448,12 +448,12 @@ public class Phase3 {
       }
       /* In: Nothing
          Out: A String containing the status text */
-      private String getStatusText(){
+      public String getStatusText(){
          return statusText.getText();
       }
       /* In: A String to set the status text to.
         Out: Nothing */
-      private void setStatusText(String text){
+      public void setStatusText(String text){
          statusText.setText(text);
          cardTable.pnlStatusText.revalidate();
          cardTable.pnlStatusText.repaint();
@@ -461,7 +461,7 @@ public class Phase3 {
       /* In: [1] The index of the affected stack
              [2] A Card object to place on the stack
          Out: Nothing */
-      private void setPlayedCard(int stack, Card card){
+      public void setPlayedCard(int stack, Card card){
          if(card == null)
             playedCardLabels[stack].setIcon(null);
          else
@@ -499,12 +499,12 @@ public class Phase3 {
       }
       /* In: The label to be highlighted.
          Out: Nothing */
-      private void highlightLabel(JLabel label){
+      public void highlightLabel(JLabel label){
          label.setBorder(new LineBorder(COLOR_BLUE));
       }
       /* In: The label to be dehighlighted.
          Out: Nothing */
-      private void deHighlightLabel(JLabel label){
+      public void deHighlightLabel(JLabel label){
          label.setBorder(null);
       }
       /* In: Nothing
@@ -515,12 +515,12 @@ public class Phase3 {
       }
       /* GUICard implements various functions necessary to draw card images
         to the screen. */
-      public static class GUICard {
+      private static class GUICard {
          //Holds a card icon for each valid card.
          private static Icon[][] iconCards = new ImageIcon[14][4];
          private static Icon iconBack;
-         static boolean iconsLoaded = false;
-         static final char[] VALID_SUITS = {'C', 'D', 'H', 'S'};
+         private static boolean iconsLoaded = false;
+         public static final char[] VALID_SUITS = {'C', 'D', 'H', 'S'};
          private static String iconFolderPath = "../images";
 
          /* In: A card object that the caller wants an image for
@@ -592,9 +592,9 @@ public class Phase3 {
         three main panels, one for the human's hand, one for the computer's, and one for
         the play area. */
       class CardTable extends JFrame {
-         static final int MAX_CARDS_PER_HAND = 56;
+         public static final int MAX_CARDS_PER_HAND = 56;
          //This table only supports 2 player play.
-         static final int MAX_PLAYERS = 2;
+         public static final int MAX_PLAYERS = 2;
          private int numCardsPerHand;
          private int numPlayers;
          public JPanel[] handPanels;
@@ -1399,4 +1399,3 @@ class CardGameFramework {
          hand[k].sort();
    }
 }
-
